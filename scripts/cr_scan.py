@@ -320,12 +320,121 @@ RULES = [
     },
     # 方法小驼峰命名检查
     {
-        'name': '方法命名不符合小驼峰规范',
+        'name': '普通方法命名不符合小驼峰规范',
         'level': '警告',
         'pattern': r'(fun|Observable|Single|Call)\s+[A-Z]\w*\(',
         'violation': '《一、Android命名规范.md》方法命名规范：小驼峰命名法，动词开头',
-        'reason': '方法名首字母大写，不符合小驼峰命名规范',
-        'fix': '改为小驼峰命名，首字母小写',
+        'reason': '普通方法名首字母大写，不符合小驼峰命名规范',
+        'fix': '改为小驼峰命名，首字母小写（注意：Compose UI组件函数不受此规则限制）',
+        'skip_compose': True,
+    },
+    # Compose函数大驼峰命名检查
+    {
+        'name': 'Compose函数命名不符合大驼峰规范',
+        'level': '警告',
+        'pattern': r'@Composable\s+(fun\s+[a-z]\w*\()|@Composable\s*\n\s*fun\s+[a-z]\w*\(',
+        'violation': 'Jetpack Compose官方命名规范：Composable函数使用大驼峰命名法',
+        'reason': '带@Composable注解的函数属于UI组件，应当使用大驼峰命名（首字母大写），而不是普通函数的小驼峰命名',
+        'fix': '将Compose函数名改为大驼峰命名，首字母大写，例如：fun MyButton() {}',
+    },
+    # 禁止使用!!非空断言
+    {
+        'name': '禁止使用!!不安全非空断言',
+        'level': '严重',
+        'pattern': r'\w+!!\.',
+        'violation': '《三、Android 编码规范.md》 空安全规范',
+        'reason': '使用!!非空断言时，如果对象为null会直接抛出NullPointerException，导致应用崩溃',
+        'fix': '改用安全调用?.配合let/run/also/apply，或者使用空值判断if (obj != null) { ... }',
+    },
+    # 禁止使用GlobalScope
+    {
+        'name': '禁止使用GlobalScope启动协程',
+        'level': '警告',
+        'pattern': r'GlobalScope\.launch|GlobalScope\.async',
+        'violation': 'Kotlin协程最佳实践',
+        'reason': 'GlobalScope没有绑定生命周期，容易导致内存泄漏和任务泄露，无法取消',
+        'fix': '使用ViewModel.viewModelScope、LifecycleOwner.lifecycleScope或者自定义CoroutineScope来启动协程',
+    },
+    # 禁止在构造函数调用open方法
+    {
+        'name': '禁止在构造函数/init块调用open方法',
+        'level': '严重',
+        'pattern': r'init\s*\{[^}]*\.\w+\(|constructor\s*\([^)]*\)\s*\{[^}]*\.\w+\(',
+        'violation': 'Kotlin编码规范',
+        'reason': '在父类构造函数中调用open方法，此时子类还未初始化完成，会导致空指针或者不可预期的行为',
+        'fix': '将逻辑移动到onCreate/initView等方法中，或者使用lazy延迟初始化',
+    },
+    # 禁止硬编码颜色值
+    {
+        'name': '禁止硬编码颜色值',
+        'level': '警告',
+        'pattern': r'setBackgroundColor\s*\(\s*Color\.parseColor\s*\(\s*"#|Color\.r(ed|gb)\s*\(\s*\d+',
+        'violation': '《三、Android 编码规范.md》资源使用规范',
+        'reason': '硬编码颜色值不利于统一主题管理，无法适配深色模式',
+        'fix': '将颜色值定义在colors.xml资源文件中，通过ContextCompat.getColor(context, R.color.xxx)获取',
+    },
+    # 禁止硬编码尺寸值
+    {
+        'name': '禁止硬编码尺寸值',
+        'level': '警告',
+        'pattern': r'setTextSize\s*\(\s*\d+|setPadding\s*\(\s*\d+|setMargin\s*\(\s*\d+|dp\s*\(\s*\d+',
+        'violation': '《三、Android 编码规范.md》资源使用规范',
+        'reason': '硬编码尺寸值不利于多屏幕适配，无法统一管理',
+        'fix': '将尺寸值定义在dimens.xml资源文件中，通过resources.getDimension(R.dimen.xxx)获取',
+    },
+    # 未处理的TODO注释
+    {
+        'name': '存在未处理的TODO注释',
+        'level': '建议',
+        'pattern': r'//\s*TODO\s*[:：]?\s*.*|/\*\s*TODO\s*[:：]?\s*.*\*/',
+        'violation': '编码最佳实践',
+        'reason': '代码中存在未完成的TODO标记，需要及时处理',
+        'fix': '实现TODO对应的功能，或者移除无效的TODO注释',
+    },
+    # 禁止使用commit提交SharedPreferences
+    {
+        'name': '禁止使用SharedPreferences.Editor.commit()',
+        'level': '警告',
+        'pattern': r'\.editor\(\)\.commit\(\)|edit\(\)\.commit\(\)',
+        'violation': '《三、Android 编码规范.md》性能优化规范',
+        'reason': 'commit()是同步操作，会阻塞调用线程，可能导致ANR',
+        'fix': '改用apply()异步提交，不需要返回值的情况下优先使用apply()',
+    },
+    # 禁止使用+拼接大量字符串
+    {
+        'name': '禁止使用+拼接大量字符串',
+        'level': '建议',
+        'pattern': r'"[^"]*"\s*\+\s*"[^"]*"\s*\+\s*"[^"]*"',
+        'violation': '性能优化规范',
+        'reason': '使用+拼接字符串会创建大量临时String对象，造成内存浪费和性能损耗',
+        'fix': '使用String.format()、buildString{}或者StringBuilder拼接字符串',
+    },
+    # 不必要的public修饰符
+    {
+        'name': '不必要的public修饰符',
+        'level': '建议',
+        'pattern': r'public\s+class|public\s+fun|public\s+val|public\s+var',
+        'violation': 'Kotlin编码规范',
+        'reason': 'Kotlin默认访问修饰符是public，不需要显式声明',
+        'fix': '移除多余的public修饰符',
+    },
+    # 匿名内部类Handler导致内存泄漏
+    {
+        'name': '匿名内部类Handler可能导致内存泄漏',
+        'level': '严重',
+        'pattern': r'object\s*:\s*Handler\s*\(\)|val\s+\w+\s*=\s*object\s*:\s*Handler',
+        'violation': '《八、Android应用安全开发规范.md》内存泄漏防范',
+        'reason': '匿名内部类会隐式持有外部类引用，如果Handler在Activity/Fragment销毁后还有未处理的消息，会导致内存泄漏',
+        'fix': '使用静态内部类+WeakReference弱引用外部类，或者使用Handler(Looper.getMainLooper())配合Lifecycle绑定生命周期',
+    },
+    # RxJava订阅没有处理error回调
+    {
+        'name': 'RxJava订阅没有处理error回调',
+        'level': '严重',
+        'pattern': r'\.subscribe\s*\(\s*\{[^}]*\}\s*\)',
+        'violation': 'RxJava最佳实践',
+        'reason': 'RxJava订阅时没有处理error回调，发生异常时会直接抛出OnErrorNotImplementedException，导致应用崩溃',
+        'fix': '添加error回调处理异常：.subscribe(onNext = {}, onError = { e -> /* 处理异常 */ })',
     }
 ]
 
@@ -360,6 +469,16 @@ class CodeReviewer:
                         # 特殊检查：事件类必须在event包下
                         if rule['name'] == 'Event事件类命名不符合规范' and '/event/' not in file_path:
                             continue
+
+                        # 特殊检查：跳过Compose函数的小驼峰命名检查
+                        if rule.get('skip_compose', False):
+                            # 检查当前行或上一行是否有@Composable注解
+                            has_compose_annotation = '@Composable' in line
+                            if not has_compose_annotation and line_num > 1:
+                                prev_line = lines[line_num - 2]
+                                has_compose_annotation = '@Composable' in prev_line
+                            if has_compose_annotation:
+                                continue
 
                         self.issues.append({
                             'rule': rule,
