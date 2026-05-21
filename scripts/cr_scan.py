@@ -409,7 +409,7 @@ RULES = [
         'reason': '使用+拼接字符串会创建大量临时String对象，造成内存浪费和性能损耗',
         'fix': '使用String.format()、buildString{}或者StringBuilder拼接字符串',
     },
-    # 不必要的public修饰符
+    # 不必要的public修饰符（仅Kotlin文件）
     {
         'name': '不必要的public修饰符',
         'level': '建议',
@@ -417,6 +417,7 @@ RULES = [
         'violation': 'Kotlin编码规范',
         'reason': 'Kotlin默认访问修饰符是public，不需要显式声明',
         'fix': '移除多余的public修饰符',
+        'only_kt': True,
     },
     # 匿名内部类Handler导致内存泄漏
     {
@@ -479,6 +480,10 @@ class CodeReviewer:
                                 has_compose_annotation = '@Composable' in prev_line
                             if has_compose_annotation:
                                 continue
+
+                        # 特殊检查：仅Kotlin文件生效的规则
+                        if rule.get('only_kt', False) and file_path.endswith('.java'):
+                            continue
 
                         self.issues.append({
                             'rule': rule,
